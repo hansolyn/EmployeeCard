@@ -232,7 +232,9 @@ table.promo td.why{color:var(--sub);white-space:normal;min-width:200px}
   #printCard.promo-print table{font-size:8pt}
   #printCard.promo-print th{background:#1F3A5F !important;color:#fff;text-align:center;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   #printCard.promo-print td{text-align:center;padding:1mm 1.2mm}
-  #printCard.promo-print td:last-child{min-width:42mm}
+  #printCard.promo-print .note{break-inside:avoid;margin-top:6mm}
+  #printCard.promo-print .note h2{font-size:10.5pt;border:0;margin:0 0 2mm;padding:0}
+  #printCard.promo-print .notebox{border:1px solid #999;height:38mm}
   #printCard.promo-print tr.ok td{background:#DDF3E0 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   #printCard.promo-print tr{break-inside:avoid}
 }
@@ -897,9 +899,9 @@ var HR = (function(){
   }
 
   /* ---------- 승격 심사 ---------- */
-  var PROMO_HEAD = ['부서명','성명','입사일자','현직책','현직급','직전 승격일자','재직기간','체류연수','총 경력기간','평균점수','대상자','승격레벨','인사총무팀 의견'];
+  var PROMO_HEAD = ['부서명','성명','입사일자','현직책','현직급','직전 승격일자','재직기간','체류연수','총 경력기간','평균점수','대상자','승격레벨'], PROMO_NOTE = '인사총무팀 의견';
   function promoRounds(){ var Y = +S.base.slice(0,4), r = []; [Y-1,Y,Y+1].forEach(function(y){ r.push(y+'-06-30', y+'-12-31'); }); return r; }
-  function promoRow(r){ var p = r.p; return [deptLabel(p), p.name, p.join, p.pos||'', p.grade, r.last||'', HR.fmtYM(r.tenure), HR.fmtYM(r.stay), HR.fmtYM(r.total), r.avg===null ? '' : (r.avgFull ? Math.round(r.avg) : Math.round(r.avg)+' ('+r.avgYears+'년)'), r.na ? '미해당' : (r.ok ? 'O' : ''), r.to, '']; }
+  function promoRow(r){ var p = r.p; return [deptLabel(p), p.name, p.join, p.pos||'', p.grade, r.last||'', HR.fmtYM(r.tenure), HR.fmtYM(r.stay), HR.fmtYM(r.total), r.avg===null ? '' : (r.avgFull ? Math.round(r.avg) : Math.round(r.avg)+' ('+r.avgYears+'년)'), r.na ? '미해당' : (r.ok ? 'O' : ''), r.to]; }
   function promoTitle(){ return '[Career Level UP] 승격대상자 명단'; }
   function promoSub(rows){ return '심사 기준일 '+S.promoDate+' / 명단 '+rows.length+'명, 대상자 '+rows.filter(function(r){ return r.ok; }).length+'명'; }
   function openPromo(date){
@@ -912,24 +914,32 @@ var HR = (function(){
     var body = '<div class="promo-bar"><div class="field"><label for="promoSel">심사 회차</label><select id="promoSel">'+rounds.map(function(d){ return '<option value="'+d+'"'+(d===S.promoDate?' selected':'')+'>'+d.slice(0,4)+'년 '+(d.slice(5,7)==='06'?'6월':'12월')+' ('+d+' 기준)</option>'; }).join('')+'</select></div>'
       + '<span class="count">'+promoSub(rows).split(' / ')[1]+'</span><span class="spacer"></span><button class="btn" id="promoXlsx">엑셀로 저장</button><button class="btn" id="promoPrint">인쇄</button></div>'
       + '<div class="badges" style="margin:0 0 12px">'+rule+'</div>'
-      + '<div class="promo-wrap"><table class="t promo"><thead><tr>'+PROMO_HEAD.slice(0,12).map(function(h){ return '<th>'+h+'</th>'; }).join('')+'<th>판정 근거</th></tr></thead><tbody>'
-      + rows.map(function(r){ var c = promoRow(r); return '<tr class="'+(r.ok?'ok':'')+'">'+c.slice(0,12).map(function(v,i){ return '<td>'+(i===10 && r.ok ? '<b>O</b>' : esc(v))+'</td>'; }).join('')+'<td class="why">'+esc(r.ok ? '요건 충족' : r.why.join(', '))+'</td></tr>'; }).join('')
-      + '</tbody></table></div><p style="color:var(--sub);font-size:12.5px;margin:12px 0 0">임원과 '+esc(P.exclude.join('·')||'제외 고용형태')+', 퇴직자는 명단에서 뺍니다. 기준일 당일까지 포함해 계산하며 휴직기간은 빼지 않습니다. 판정 근거는 화면에만 보이고, 엑셀과 인쇄물에는 인사총무팀 의견란이 빈칸으로 들어갑니다.</p>';
+      + '<div class="promo-wrap"><table class="t promo"><thead><tr>'+PROMO_HEAD.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'<th>판정 근거</th></tr></thead><tbody>'
+      + rows.map(function(r){ var c = promoRow(r); return '<tr class="'+(r.ok?'ok':'')+'">'+c.map(function(v,i){ return '<td>'+(i===10 && r.ok ? '<b>O</b>' : esc(v))+'</td>'; }).join('')+'<td class="why">'+esc(r.ok ? '요건 충족' : r.why.join(', '))+'</td></tr>'; }).join('')
+      + '</tbody></table></div><p style="color:var(--sub);font-size:12.5px;margin:12px 0 0">임원과 '+esc(P.exclude.join('·')||'제외 고용형태')+', 퇴직자는 명단에서 뺍니다. 기준일 당일까지 포함해 계산하며 휴직기간은 빼지 않습니다. 판정 근거는 화면에만 보이고, 엑셀과 인쇄물에는 명단 아래에 인사총무팀 의견을 적는 칸이 들어갑니다.</p>';
     simpleDialog('승격 심사', body, 1240);
   }
   function promoXlsx(){
     var rows = S.promoRows, aoa = [[promoTitle()], [promoSub(rows)], [], PROMO_HEAD].concat(rows.map(promoRow));
+    var N = PROMO_HEAD.length, end = aoa.length, noteH = end+1, box0 = end+2, boxRows = 8;   // 명단 끝 → 빈 줄 → 소제목 → 의견 칸
+    aoa.push([], [PROMO_NOTE]); for (var k=0;k<boxRows;k++) aoa.push(['']);
     var ws = XLSX.utils.aoa_to_sheet(aoa), line = {style:'thin', color:{rgb:'B8C0CC'}}, bd = {top:line, bottom:line, left:line, right:line};
-    ws['!merges'] = [{s:{r:0,c:0}, e:{r:0,c:12}}, {s:{r:1,c:0}, e:{r:1,c:12}}];
-    ws['!cols'] = [16,9,12,9,8,13,13,13,13,9,8,9,34].map(function(w){ return {wch:w}; });
+    ws['!merges'] = [{s:{r:0,c:0}, e:{r:0,c:N-1}}, {s:{r:1,c:0}, e:{r:1,c:N-1}}, {s:{r:noteH,c:0}, e:{r:noteH,c:N-1}}, {s:{r:box0,c:0}, e:{r:box0+boxRows-1,c:N-1}}];
+    ws['!cols'] = [16,9,12,9,8,13,13,13,13,9,8,9].map(function(w){ return {wch:w}; });
     ws['!rows'] = [{hpt:30},{hpt:18},{hpt:6},{hpt:30}];
     ws.A1.s = {font:{bold:true, sz:15}, alignment:{horizontal:'center', vertical:'center'}};
     ws.A2.s = {font:{sz:10, color:{rgb:'555555'}}, alignment:{horizontal:'center'}};
-    for (var r=3;r<aoa.length;r++) for (var c=0;c<13;c++){
+    ws[XLSX.utils.encode_cell({r:noteH,c:0})].s = {font:{bold:true, sz:11}, alignment:{vertical:'center'}};
+    for (var br=box0;br<box0+boxRows;br++) for (var bc=0;bc<N;bc++){
+      var bref = XLSX.utils.encode_cell({r:br,c:bc}); ws[bref] = {t:'s', v:''};
+      ws[bref].s = {font:{sz:10}, alignment:{vertical:'top', horizontal:'left', wrapText:true}, border:{top: br===box0 ? line : undefined, bottom: br===box0+boxRows-1 ? line : undefined, left: bc===0 ? line : undefined, right: bc===N-1 ? line : undefined}};
+    }
+    ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:box0+boxRows-1,c:N-1}});
+    for (var r=3;r<end;r++) for (var c=0;c<N;c++){
       var ref = XLSX.utils.encode_cell({r:r,c:c}); if (!ws[ref]) ws[ref] = {t:'s', v:''};
       var ok = r>3 && rows[r-4].ok;
       ws[ref].s = r===3 ? {font:{bold:true, color:{rgb:'FFFFFF'}, sz:10}, fill:{fgColor:{rgb:'1F3A5F'}}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:bd}
-                        : {font:{sz:10, bold: ok && (c===10||c===11)}, fill: ok ? {fgColor:{rgb:'DDF3E0'}} : undefined, alignment:{horizontal: c===12 ? 'left' : 'center', vertical:'center'}, border:bd};
+                        : {font:{sz:10, bold: ok && (c===10||c===11)}, fill: ok ? {fgColor:{rgb:'DDF3E0'}} : undefined, alignment:{horizontal:'center', vertical:'center'}, border:bd};
       if (r>3 && !ok) delete ws[ref].s.fill;
     }
     var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '승격대상자 명단');
@@ -939,7 +949,7 @@ var HR = (function(){
     var rows = S.promoRows;
     $('#printCard').className = 'promo-print';
     $('#printCard').innerHTML = '<h1 style="text-align:center;border:0">'+promoTitle()+'</h1><div class="ph" style="justify-content:center">'+promoSub(rows)+'</div><table><tr>'+PROMO_HEAD.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'</tr>'
-      + rows.map(function(r){ return '<tr class="'+(r.ok?'ok':'')+'">'+promoRow(r).map(function(v){ return '<td>'+esc(v)+'</td>'; }).join('')+'</tr>'; }).join('')+'</table>';
+      + rows.map(function(r){ return '<tr class="'+(r.ok?'ok':'')+'">'+promoRow(r).map(function(v){ return '<td>'+esc(v)+'</td>'; }).join('')+'</tr>'; }).join('')+'</table><section class="note"><h2>'+PROMO_NOTE+'</h2><div class="notebox"></div></section>';
     window.print();
   }
 
