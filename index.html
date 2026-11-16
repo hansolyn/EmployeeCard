@@ -234,10 +234,15 @@ table.promo td.why{color:var(--sub);white-space:normal;min-width:200px}
   #printCard.promo-print td{text-align:center;padding:1mm 1.2mm}
   #printCard.promo-print .note{break-inside:avoid;margin-top:6mm}
   #printCard.promo-print .note h2{font-size:10.5pt;border:0;margin:0 0 2mm;padding:0}
-  #printCard.promo-print .notebox{border:1px solid #999;height:38mm}
+  #printCard.promo-print .notebox{border:1px solid #999;min-height:38mm;padding:2.5mm 3mm;font-size:9.5pt;line-height:1.6;white-space:pre-wrap;text-align:left}
   #printCard.promo-print tr.ok td{background:#DDF3E0 !important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   #printCard.promo-print tr{break-inside:avoid}
 }
+
+.promo-note{margin-top:14px}
+.promo-note label{display:block;font-weight:700;font-size:13.5px;margin-bottom:6px}
+.promo-note textarea{width:100%;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);padding:10px 12px;font:inherit;line-height:1.6;resize:vertical}
+.promo-note textarea:focus{outline:0;border-color:var(--accent)}
 
 </style>
 </head>
@@ -916,12 +921,13 @@ var HR = (function(){
       + '<div class="badges" style="margin:0 0 12px">'+rule+'</div>'
       + '<div class="promo-wrap"><table class="t promo"><thead><tr>'+PROMO_HEAD.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'<th>판정 근거</th></tr></thead><tbody>'
       + rows.map(function(r){ var c = promoRow(r); return '<tr class="'+(r.ok?'ok':'')+'">'+c.map(function(v,i){ return '<td>'+(i===10 && r.ok ? '<b>O</b>' : esc(v))+'</td>'; }).join('')+'<td class="why">'+esc(r.ok ? '요건 충족' : r.why.join(', '))+'</td></tr>'; }).join('')
-      + '</tbody></table></div><p style="color:var(--sub);font-size:12.5px;margin:12px 0 0">임원과 '+esc(P.exclude.join('·')||'제외 고용형태')+', 퇴직자는 명단에서 뺍니다. 기준일 당일까지 포함해 계산하며 휴직기간은 빼지 않습니다. 판정 근거는 화면에만 보이고, 엑셀과 인쇄물에는 명단 아래에 인사총무팀 의견을 적는 칸이 들어갑니다.</p>';
+      + '</tbody></table></div><div class="promo-note"><label for="promoNote">'+PROMO_NOTE+'</label><textarea id="promoNote" rows="5" placeholder="여기에 적은 내용이 엑셀과 인쇄물의 의견 칸에 그대로 들어갑니다. 비워 두면 빈 칸으로 나갑니다.">'+esc(S.promoNote||'')+'</textarea></div><p style="color:var(--sub);font-size:12.5px;margin:12px 0 0">임원과 '+esc(P.exclude.join('·')||'제외 고용형태')+', 퇴직자는 명단에서 뺍니다. 기준일 당일까지 포함해 계산하며 휴직기간은 빼지 않습니다. 판정 근거는 화면에만 보이고, 의견은 이 창을 닫아도 유지되지만 저장되지는 않아, 페이지를 새로고침하면 지워집니다.</p>';
     simpleDialog('승격 심사', body, 1240);
   }
   function promoXlsx(){
     var rows = S.promoRows, aoa = [[promoTitle()], [promoSub(rows)], [], PROMO_HEAD].concat(rows.map(promoRow));
     var N = PROMO_HEAD.length, end = aoa.length, noteH = end+1, box0 = end+2, boxRows = 8;   // 명단 끝 → 빈 줄 → 소제목 → 의견 칸
+    var note = (S.promoNote||'').trim(); boxRows = Math.max(boxRows, note.split('\n').length + Math.ceil(note.length/90) + 1);
     aoa.push([], [PROMO_NOTE]); for (var k=0;k<boxRows;k++) aoa.push(['']);
     var ws = XLSX.utils.aoa_to_sheet(aoa), line = {style:'thin', color:{rgb:'B8C0CC'}}, bd = {top:line, bottom:line, left:line, right:line};
     ws['!merges'] = [{s:{r:0,c:0}, e:{r:0,c:N-1}}, {s:{r:1,c:0}, e:{r:1,c:N-1}}, {s:{r:noteH,c:0}, e:{r:noteH,c:N-1}}, {s:{r:box0,c:0}, e:{r:box0+boxRows-1,c:N-1}}];
@@ -931,7 +937,7 @@ var HR = (function(){
     ws.A2.s = {font:{sz:10, color:{rgb:'555555'}}, alignment:{horizontal:'center'}};
     ws[XLSX.utils.encode_cell({r:noteH,c:0})].s = {font:{bold:true, sz:11}, alignment:{vertical:'center'}};
     for (var br=box0;br<box0+boxRows;br++) for (var bc=0;bc<N;bc++){
-      var bref = XLSX.utils.encode_cell({r:br,c:bc}); ws[bref] = {t:'s', v:''};
+      var bref = XLSX.utils.encode_cell({r:br,c:bc}); ws[bref] = {t:'s', v:(br===box0 && bc===0) ? note : ''};
       ws[bref].s = {font:{sz:10}, alignment:{vertical:'top', horizontal:'left', wrapText:true}, border:{top: br===box0 ? line : undefined, bottom: br===box0+boxRows-1 ? line : undefined, left: bc===0 ? line : undefined, right: bc===N-1 ? line : undefined}};
     }
     ws['!ref'] = XLSX.utils.encode_range({s:{r:0,c:0}, e:{r:box0+boxRows-1,c:N-1}});
@@ -949,7 +955,7 @@ var HR = (function(){
     var rows = S.promoRows;
     $('#printCard').className = 'promo-print';
     $('#printCard').innerHTML = '<h1 style="text-align:center;border:0">'+promoTitle()+'</h1><div class="ph" style="justify-content:center">'+promoSub(rows)+'</div><table><tr>'+PROMO_HEAD.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'</tr>'
-      + rows.map(function(r){ return '<tr class="'+(r.ok?'ok':'')+'">'+promoRow(r).map(function(v){ return '<td>'+esc(v)+'</td>'; }).join('')+'</tr>'; }).join('')+'</table><section class="note"><h2>'+PROMO_NOTE+'</h2><div class="notebox"></div></section>';
+      + rows.map(function(r){ return '<tr class="'+(r.ok?'ok':'')+'">'+promoRow(r).map(function(v){ return '<td>'+esc(v)+'</td>'; }).join('')+'</tr>'; }).join('')+'</table><section class="note"><h2>'+PROMO_NOTE+'</h2><div class="notebox">'+esc((S.promoNote||'').trim())+'</div></section>';
     window.print();
   }
 
@@ -1033,6 +1039,7 @@ var HR = (function(){
     $('#'+a[0]).addEventListener('change', function(){ S.f[a[1]] = this.value; if (a[1]==='div'){ S.f.sil=''; S.f.team=''; } if (a[1]==='sil') S.f.team=''; fillFilters(); render(); });
   });
   document.addEventListener('change', function(e){ if (e.target.id==='promoSel') openPromo(e.target.value); });
+  document.addEventListener('input', function(e){ if (e.target.id==='promoNote') S.promoNote = e.target.value; });
   $('#hide').addEventListener('change', function(){ S.hide = this.checked; $('#promoBtn').classList.toggle('hidden', S.hide); if (S.hide && ['raise','caution','low','hilo'].indexOf(S.card)>=0) S.card=null; if (S.model) render(); if (S.openP) openPerson(S.openP, S.tab); });
   window.addEventListener('resize', function(){ if (tourI>=0) tour(tourI); });
   setTheme(S.theme);
