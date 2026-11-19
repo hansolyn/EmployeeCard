@@ -533,7 +533,9 @@ var HR = (function(){
     var Y = +date.slice(0,4), june = date.slice(5,7)==='06', next = ymd(ms(date)+DAY), grades = model.codes.lists['직급']||[];
     var rows = [];
     model.people.forEach(function(p){
-      if (p.exec || !p.join || p.join > date || (p.leave && p.leave <= date) || (p.status==='퇴직') || P.exclude.indexOf(p.emp)>=0) return;
+      if (p.exec || !p.join || p.join > date || (p.leave && p.leave <= date) || (p.status==='퇴직')) return;
+      var evN = Object.keys(p.evals).filter(function(y){ return +y <= (june ? Y-1 : Y) && typeof P.score[p.evals[y]]==='number'; }).length;
+      if (evN < 2) return;   // 평가기록 1개 이하는 명단 제외. 계약직·시용직('명단 제외 고용형태')도 평가 2개 이상이면 포함
       var ten = diffYM(p.join, next), last = '';
       p.moves.forEach(function(mv){
         if (mv['발령구분']!=='승격' || !mv['발령일'] || mv['발령일'] > date) return;
@@ -542,22 +544,22 @@ var HR = (function(){
       });
       var stay = diffYM(last || p.join, next), total = monthsToYM(p.priorMonths + ten.total + ten.d/30);
       var rule = P.rules[p.grade], r = {p:p, tenure:ten, last:last, stay:stay, total:total, avg:null, ok:false, na:false, to:'', why:[]};
-      if (!rule || p.status==='휴직'){ r.na = true; r.why.push(!rule ? p.grade+' 승격기준 없음' : '휴직 중'); }
+      if (!rule || p.status==='휴직'){ r.na = true; r.why.push(!rule ? '승격기준 없음' : '휴직'); }
       var ny = rule ? rule.years : maxYears, ys = [], y0 = june ? Y-ny : Y-ny+1; for (var y=y0;y<y0+ny;y++) ys.push(y);
       var sc = ys.map(function(y){ return P.score[p.evals[y]]; }).filter(function(v){ return typeof v==='number' && !isNaN(v); });
       if (sc.length){ r.avg = sc.reduce(function(s,v){ return s+v; },0)/sc.length; r.avgYears = sc.length; r.avgFull = sc.length===ny; }   // 평가가 모자라면 있는 연도 평균을 참고로만 표시
       if (rule){
         if (!r.na){
           var have = rule.kind==='당사 근속' ? ten.total : total.total;
-          if (have < rule.months) r.why.push(rule.kind+' '+have+'개월 (기준 '+rule.months+'개월)');
-          if (!r.avgFull) r.why.push('평가 '+rule.years+'개년('+ys[0]+'~'+ys[ys.length-1]+') 중 '+(r.avgYears||0)+'개년만 있음');
-          else if (r.avg < rule.avg) r.why.push('평균 '+Math.round(r.avg)+'점 (기준 '+rule.avg+'점)');
+          if (have < rule.months) r.why.push(rule.kind==='당사 근속' ? '근속기간 미충족' : '경력미달');
+          if (!r.avgFull) r.why.push('평가횟수 미충족');
+          else if (r.avg < rule.avg) r.why.push('점수미달');
           r.ok = !r.why.length; if (r.ok) r.to = rule.to;
         }
       }
       rows.push(r);
     });
-    rows.sort(function(a,b){ return a.p.join < b.p.join ? -1 : a.p.join > b.p.join ? 1 : 0; });
+    rows.sort(function(a,b){ return a.p.join < b.p.join ? -1 : a.p.join > b.p.join ? 1 : String(a.p.id) < String(b.p.id) ? -1 : String(a.p.id) > String(b.p.id) ? 1 : 0; });
     return rows;
   }
 
@@ -920,7 +922,7 @@ var HR = (function(){
       + '<span class="count">'+promoSub(rows).split(' / ')[1]+'</span><span class="spacer"></span><button class="btn" id="promoXlsx">엑셀로 저장</button><button class="btn" id="promoPrint">인쇄</button></div>'
       + '<div class="badges" style="margin:0 0 12px">'+rule+'</div>'
       + '<div class="promo-wrap"><table class="t promo"><thead><tr>'+PROMO_HEAD.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'<th>판정 근거</th></tr></thead><tbody>'
-      + rows.map(function(r){ var c = promoRow(r); return '<tr class="'+(r.ok?'ok':'')+'">'+c.map(function(v,i){ return '<td>'+(i===10 && r.ok ? '<b>O</b>' : esc(v))+'</td>'; }).join('')+'<td class="why">'+esc(r.ok ? '요건 충족' : r.why.join(', '))+'</td></tr>'; }).join('')
+      + rows.map(function(r){ var c = promoRow(r); return '<tr class="'+(r.ok?'ok':'')+'">'+c.map(function(v,i){ return '<td>'+(i===10 && r.ok ? '<b>O</b>' : esc(v))+'</td>'; }).join('')+'<td class="why">'+esc(r.ok ? '충족' : r.why.join(', '))+'</td></tr>'; }).join('')
       + '</tbody></table></div><div class="promo-note"><label for="promoNote">'+PROMO_NOTE+'</label><textarea id="promoNote" rows="5" placeholder="여기에 적은 내용이 엑셀과 인쇄물의 의견 칸에 그대로 들어갑니다. 비워 두면 빈 칸으로 나갑니다.">'+esc(S.promoNote||'')+'</textarea></div><p style="color:var(--sub);font-size:12.5px;margin:12px 0 0">임원과 '+esc(P.exclude.join('·')||'제외 고용형태')+', 퇴직자는 명단에서 뺍니다. 기준일 당일까지 포함해 계산하며 휴직기간은 빼지 않습니다. 판정 근거는 화면에만 보이고, 의견은 이 창을 닫아도 유지되지만 저장되지는 않아, 페이지를 새로고침하면 지워집니다.</p>';
     simpleDialog('승격 심사', body, 1240);
   }
