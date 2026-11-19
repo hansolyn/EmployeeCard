@@ -906,9 +906,9 @@ var HR = (function(){
   }
 
   /* ---------- 승격 심사 ---------- */
-  var PROMO_HEAD = ['부서명','성명','입사일자','현직책','현직급','직전 승격일자','재직기간','체류연수','총 경력기간','평균점수','대상자','승격레벨'], PROMO_NOTE = '인사총무팀 의견';
+  var PROMO_HEAD = ['부서명','성명','현직책','현직급','직전 승격일자','재직기간','체류연수','총 경력기간','평균점수','승격레벨'], PROMO_NOTE = '인사총무팀 의견';
   function promoRounds(){ var Y = +S.base.slice(0,4), r = []; [Y-1,Y,Y+1].forEach(function(y){ r.push(y+'-06-30', y+'-12-31'); }); return r; }
-  function promoRow(r){ var p = r.p; return [deptLabel(p), p.name, p.join, p.pos||'', p.grade, r.last||'', HR.fmtYM(r.tenure), HR.fmtYM(r.stay), HR.fmtYM(r.total), r.avg===null ? '' : (r.avgFull ? Math.round(r.avg) : Math.round(r.avg)+' ('+r.avgYears+'년)'), r.na ? '미해당' : (r.ok ? 'O' : ''), r.to]; }
+  function promoRow(r){ var p = r.p; return [deptLabel(p), p.name, p.pos||'', p.grade, r.last||'', HR.fmtYM(r.tenure), HR.fmtYM(r.stay), HR.fmtYM(r.total), r.avg===null ? '' : (r.avgFull ? Math.round(r.avg) : Math.round(r.avg)+' ('+r.avgYears+'년)'), r.na ? '미해당' : r.to]; }
   function promoTitle(){ return '[Career Level UP] 승격대상자 명단'; }
   function promoSub(rows){ return '심사 기준일 '+S.promoDate+' / 명단 '+rows.length+'명, 대상자 '+rows.filter(function(r){ return r.ok; }).length+'명'; }
   function openPromo(date){
@@ -922,7 +922,7 @@ var HR = (function(){
       + '<span class="count">'+promoSub(rows).split(' / ')[1]+'</span><span class="spacer"></span><button class="btn" id="promoXlsx">엑셀로 저장</button><button class="btn" id="promoPrint">인쇄</button></div>'
       + '<div class="badges" style="margin:0 0 12px">'+rule+'</div>'
       + '<div class="promo-wrap"><table class="t promo"><thead><tr>'+PROMO_HEAD.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'<th>판정 근거</th></tr></thead><tbody>'
-      + rows.map(function(r){ var c = promoRow(r); return '<tr class="'+(r.ok?'ok':'')+'">'+c.map(function(v,i){ return '<td>'+(i===10 && r.ok ? '<b>O</b>' : esc(v))+'</td>'; }).join('')+'<td class="why">'+esc(r.ok ? '충족' : r.why.join(', '))+'</td></tr>'; }).join('')
+      + rows.map(function(r){ var c = promoRow(r); return '<tr class="'+(r.ok?'ok':'')+'">'+c.map(function(v,i){ return '<td>'+(i===9 && r.ok ? '<b>'+esc(v)+'</b>' : esc(v))+'</td>'; }).join('')+'<td class="why">'+esc(r.ok ? '충족' : r.why.join(', '))+'</td></tr>'; }).join('')
       + '</tbody></table></div><div class="promo-note"><label for="promoNote">'+PROMO_NOTE+'</label><textarea id="promoNote" rows="5" placeholder="여기에 적은 내용이 엑셀과 인쇄물의 의견 칸에 그대로 들어갑니다. 비워 두면 빈 칸으로 나갑니다.">'+esc(S.promoNote||'')+'</textarea></div><p style="color:var(--sub);font-size:12.5px;margin:12px 0 0">임원과 '+esc(P.exclude.join('·')||'제외 고용형태')+', 퇴직자는 명단에서 뺍니다. 기준일 당일까지 포함해 계산하며 휴직기간은 빼지 않습니다. 판정 근거는 화면에만 보이고, 의견은 이 창을 닫아도 유지되지만 저장되지는 않아, 페이지를 새로고침하면 지워집니다.</p>';
     simpleDialog('승격 심사', body, 1240);
   }
@@ -933,7 +933,7 @@ var HR = (function(){
     aoa.push([], [PROMO_NOTE]); for (var k=0;k<boxRows;k++) aoa.push(['']);
     var ws = XLSX.utils.aoa_to_sheet(aoa), line = {style:'thin', color:{rgb:'B8C0CC'}}, bd = {top:line, bottom:line, left:line, right:line};
     ws['!merges'] = [{s:{r:0,c:0}, e:{r:0,c:N-1}}, {s:{r:1,c:0}, e:{r:1,c:N-1}}, {s:{r:noteH,c:0}, e:{r:noteH,c:N-1}}, {s:{r:box0,c:0}, e:{r:box0+boxRows-1,c:N-1}}];
-    ws['!cols'] = [16,9,12,9,8,13,13,13,13,9,8,9].map(function(w){ return {wch:w}; });
+    ws['!cols'] = [16,9,9,8,13,13,13,13,9,9].map(function(w){ return {wch:w}; });
     ws['!rows'] = [{hpt:30},{hpt:18},{hpt:6},{hpt:30}];
     ws.A1.s = {font:{bold:true, sz:15}, alignment:{horizontal:'center', vertical:'center'}};
     ws.A2.s = {font:{sz:10, color:{rgb:'555555'}}, alignment:{horizontal:'center'}};
@@ -947,7 +947,7 @@ var HR = (function(){
       var ref = XLSX.utils.encode_cell({r:r,c:c}); if (!ws[ref]) ws[ref] = {t:'s', v:''};
       var ok = r>3 && rows[r-4].ok;
       ws[ref].s = r===3 ? {font:{bold:true, color:{rgb:'FFFFFF'}, sz:10}, fill:{fgColor:{rgb:'1F3A5F'}}, alignment:{horizontal:'center', vertical:'center', wrapText:true}, border:bd}
-                        : {font:{sz:10, bold: ok && (c===10||c===11)}, fill: ok ? {fgColor:{rgb:'DDF3E0'}} : undefined, alignment:{horizontal:'center', vertical:'center'}, border:bd};
+                        : {font:{sz:10, bold: ok && c===9}, fill: ok ? {fgColor:{rgb:'DDF3E0'}} : undefined, alignment:{horizontal:'center', vertical:'center'}, border:bd};
       if (r>3 && !ok) delete ws[ref].s.fill;
     }
     var wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, '승격대상자 명단');
