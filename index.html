@@ -909,6 +909,7 @@ var HR = (function(){
   var PROMO_HEAD = ['부서명','성명','현직책','현직급','직전 승격일자','재직기간','체류연수','총 경력기간','평균점수','승격레벨'], PROMO_NOTE = '인사총무팀 의견';
   function promoRounds(){ var Y = +S.base.slice(0,4), r = []; [Y-1,Y,Y+1].forEach(function(y){ r.push(y+'-06-30', y+'-12-31'); }); return r; }
   function promoRow(r){ var p = r.p; return [deptLabel(p), p.name, p.pos||'', p.grade, r.last||'', HR.fmtYM(r.tenure), HR.fmtYM(r.stay), HR.fmtYM(r.total), r.avg===null ? '' : (r.avgFull ? Math.round(r.avg) : Math.round(r.avg)+' ('+r.avgYears+'년)'), r.to]; }
+  function promoNoteKey(){ return 'hr.promoNote.'+(S.demo ? 'demo.' : '')+S.promoDate; }   // 회차별로 이 브라우저에 저장
   function promoTitle(){ return '[Career Level UP] 승격대상자 명단'; }
   function promoSub(rows){ return '심사 기준일 '+S.promoDate+' / 명단 '+rows.length+'명, 대상자 '+rows.filter(function(r){ return r.ok; }).length+'명'; }
   function openPromo(date){
@@ -916,6 +917,7 @@ var HR = (function(){
     var rounds = promoRounds();
     S.promoDate = date || S.promoDate || rounds.filter(function(d){ return d >= S.base; })[0] || rounds[rounds.length-1];
     if (rounds.indexOf(S.promoDate)<0) rounds.push(S.promoDate);
+    S.promoNote = store.get(promoNoteKey()) || '';
     var rows = S.promoRows = HR.promoList(S.model, S.promoDate), P = S.model.promo;
     var rule = Object.keys(P.rules).map(function(g){ var x = P.rules[g]; return '<span class="badge">'+esc(g)+' → '+esc(x.to)+': '+esc(x.kind)+' '+x.months+'개월, 직전 '+x.years+'년 평균 '+x.avg+'점 이상</span>'; }).join(' ');
     var body = '<div class="promo-bar"><div class="field"><label for="promoSel">심사 회차</label><select id="promoSel">'+rounds.map(function(d){ return '<option value="'+d+'"'+(d===S.promoDate?' selected':'')+'>'+d.slice(0,4)+'년 '+(d.slice(5,7)==='06'?'6월':'12월')+' ('+d+' 기준)</option>'; }).join('')+'</select></div>'
@@ -923,7 +925,7 @@ var HR = (function(){
       + '<div class="badges" style="margin:0 0 12px">'+rule+'</div>'
       + '<div class="promo-wrap"><table class="t promo"><thead><tr>'+PROMO_HEAD.map(function(h){ return '<th>'+h+'</th>'; }).join('')+'<th>판정 근거</th></tr></thead><tbody>'
       + rows.map(function(r){ var c = promoRow(r); return '<tr class="'+(r.ok?'ok':'')+'">'+c.map(function(v,i){ return '<td>'+(i===9 && r.ok ? '<b>'+esc(v)+'</b>' : esc(v))+'</td>'; }).join('')+'<td class="why">'+esc(r.ok ? '충족' : r.why.join(', '))+'</td></tr>'; }).join('')
-      + '</tbody></table></div><div class="promo-note"><label for="promoNote">'+PROMO_NOTE+'</label><textarea id="promoNote" rows="5" placeholder="여기에 적은 내용이 엑셀과 인쇄물의 의견 칸에 그대로 들어갑니다. 비워 두면 빈 칸으로 나갑니다.">'+esc(S.promoNote||'')+'</textarea></div><p style="color:var(--sub);font-size:12.5px;margin:12px 0 0">임원과 '+esc(P.exclude.join('·')||'제외 고용형태')+', 퇴직자는 명단에서 뺍니다. 기준일 당일까지 포함해 계산하며 휴직기간은 빼지 않습니다. 판정 근거는 화면에만 보이고, 의견은 이 창을 닫아도 유지되지만 저장되지는 않아, 페이지를 새로고침하면 지워집니다.</p>';
+      + '</tbody></table></div><div class="promo-note"><label for="promoNote">'+PROMO_NOTE+'</label><textarea id="promoNote" rows="5" placeholder="이 회차의 의견을 적으면 엑셀과 인쇄물의 의견 칸에 그대로 들어갑니다. 비워 두면 빈 칸으로 나갑니다.">'+esc(S.promoNote||'')+'</textarea></div><p style="color:var(--sub);font-size:12.5px;margin:12px 0 0">임원과 '+esc(P.exclude.join('·')||'제외 고용형태')+', 퇴직자는 명단에서 뺍니다. 기준일 당일까지 포함해 계산하며 휴직기간은 빼지 않습니다. 판정 근거는 화면에만 보이고, 의견은 회차별로 이 브라우저에 자동 저장되어 새로고침해도 남습니다. 다른 PC나 브라우저에서는 보이지 않습니다.</p>';
     simpleDialog('승격 심사', body, 1240);
   }
   function promoXlsx(){
@@ -1041,7 +1043,7 @@ var HR = (function(){
     $('#'+a[0]).addEventListener('change', function(){ S.f[a[1]] = this.value; if (a[1]==='div'){ S.f.sil=''; S.f.team=''; } if (a[1]==='sil') S.f.team=''; fillFilters(); render(); });
   });
   document.addEventListener('change', function(e){ if (e.target.id==='promoSel') openPromo(e.target.value); });
-  document.addEventListener('input', function(e){ if (e.target.id==='promoNote') S.promoNote = e.target.value; });
+  document.addEventListener('input', function(e){ if (e.target.id==='promoNote'){ S.promoNote = e.target.value; store.set(promoNoteKey(), S.promoNote); } });
   $('#hide').addEventListener('change', function(){ S.hide = this.checked; $('#promoBtn').classList.toggle('hidden', S.hide); if (S.hide && ['raise','caution','low','hilo'].indexOf(S.card)>=0) S.card=null; if (S.model) render(); if (S.openP) openPerson(S.openP, S.tab); });
   window.addEventListener('resize', function(){ if (tourI>=0) tour(tourI); });
   setTheme(S.theme);
