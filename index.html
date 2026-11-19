@@ -908,7 +908,7 @@ var HR = (function(){
   /* ---------- 승격 심사 ---------- */
   var PROMO_HEAD = ['부서명','성명','현직책','현직급','직전 승격일자','재직기간','체류연수','총 경력기간','평균점수','승격레벨'], PROMO_NOTE = '인사총무팀 의견';
   function promoRounds(){ var Y = +S.base.slice(0,4), r = []; [Y-1,Y,Y+1].forEach(function(y){ r.push(y+'-06-30', y+'-12-31'); }); return r; }
-  function promoRow(r){ var p = r.p; return [deptLabel(p), p.name, p.pos||'', p.grade, r.last||'', HR.fmtYM(r.tenure), HR.fmtYM(r.stay), HR.fmtYM(r.total), r.avg===null ? '' : (r.avgFull ? Math.round(r.avg) : Math.round(r.avg)+' ('+r.avgYears+'년)'), r.na ? '미해당' : r.to]; }
+  function promoRow(r){ var p = r.p; return [deptLabel(p), p.name, p.pos||'', p.grade, r.last||'', HR.fmtYM(r.tenure), HR.fmtYM(r.stay), HR.fmtYM(r.total), r.avg===null ? '' : (r.avgFull ? Math.round(r.avg) : Math.round(r.avg)+' ('+r.avgYears+'년)'), r.to]; }
   function promoTitle(){ return '[Career Level UP] 승격대상자 명단'; }
   function promoSub(rows){ return '심사 기준일 '+S.promoDate+' / 명단 '+rows.length+'명, 대상자 '+rows.filter(function(r){ return r.ok; }).length+'명'; }
   function openPromo(date){
